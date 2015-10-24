@@ -17,15 +17,21 @@
 package net.grandcentrix.tray.provider;
 
 
+import net.grandcentrix.tray.core.TrayLog;
+
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
-import android.util.Log;
+import android.support.annotation.NonNull;
+import android.support.annotation.VisibleForTesting;
 
 /**
+ * Helper to access the two internal databases where all tray data are saved
+ * <p>
  * Created by jannisveerkamp on 17.09.14.
  */
+@VisibleForTesting
 public class TrayDBHelper extends SQLiteOpenHelper {
 
     public static final String TABLE_NAME = "TrayPreferences";
@@ -33,6 +39,8 @@ public class TrayDBHelper extends SQLiteOpenHelper {
     public static final String INTERNAL_TABLE_NAME = "TrayInternal";
 
     public static final String DATABASE_NAME = "tray.db";
+
+    public static final String DATABASE_NAME_NO_BACKUP = "tray_backup_excluded.db";
 
     public static final String KEY = "KEY";
 
@@ -83,26 +91,34 @@ public class TrayDBHelper extends SQLiteOpenHelper {
 
     /*package*/ static final int DATABASE_VERSION = 2;
 
-    private static final String TAG = TrayDBHelper.class.getSimpleName();
-
     private final int mCreateVersion;
 
-    /*package*/ TrayDBHelper(Context context, String databaseName, int databaseVersion) {
+    private final boolean mWithBackup;
+
+    /*package*/ TrayDBHelper(Context context, String databaseName, final boolean withBackup,
+            int databaseVersion) {
         super(context, databaseName, null, databaseVersion);
+        mWithBackup = withBackup;
         mCreateVersion = databaseVersion;
     }
 
     public TrayDBHelper(Context context) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        this(context, true);
+    }
+
+    public TrayDBHelper(Context context, final boolean withBackup) {
+        super(context, withBackup ? DATABASE_NAME : DATABASE_NAME_NO_BACKUP, null,
+                DATABASE_VERSION);
+        mWithBackup = withBackup;
         mCreateVersion = DATABASE_VERSION;
     }
 
     @Override
     public void onCreate(final SQLiteDatabase db) {
-        Log.v(TAG, "onCreate with version " + mCreateVersion);
+        TrayLog.v(logTag() + "onCreate with version " + mCreateVersion);
 
         createV1(db);
-        Log.v(TAG, "created database version 1");
+        TrayLog.v(logTag() + "created database version 1");
 
         if (mCreateVersion > 1) {
             onUpgrade(db, 1, mCreateVersion);
@@ -112,7 +128,8 @@ public class TrayDBHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(final SQLiteDatabase db, final int oldVersion,
             final int newVersion) {
-        Log.v(TAG, "upgrading Database from version " + oldVersion + " to version " + newVersion);
+        TrayLog.v(logTag() + "upgrading Database from version " + oldVersion
+                + " to version " + newVersion);
 
         // increase the version here after the upgrade was implemented
         if (newVersion > 2) {
@@ -123,7 +140,7 @@ public class TrayDBHelper extends SQLiteOpenHelper {
         switch (oldVersion) {
             case 1:
                 upgradeToV2(db);
-                Log.v(TAG, "upgraded Database to version 2");
+                TrayLog.v(logTag() + "upgraded Database to version 2");
                 break;
             default:
                 throw new IllegalArgumentException(
@@ -133,6 +150,11 @@ public class TrayDBHelper extends SQLiteOpenHelper {
 
     private void createV1(final SQLiteDatabase db) {
         db.execSQL(V1_PREFERENCES_CREATE);
+    }
+
+    @NonNull
+    private String logTag() {
+        return "tray internal db (" + (mWithBackup ? "backup" : "no backup") + "): ";
     }
 
     private void upgradeToV2(final SQLiteDatabase db) {

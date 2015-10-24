@@ -28,12 +28,6 @@ public class TrayDBHelperTest extends AndroidTestCase {
 
     private static final String TEST_DATABASE_NAME = "upgradeDbTest.db";
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        getContext().deleteDatabase(TEST_DATABASE_NAME);
-    }
-
     public void testCreateVersion1() throws Exception {
         final TrayDBHelper trayDBHelper = initDb(1, false);
         assertV1Integrity(trayDBHelper);
@@ -74,6 +68,12 @@ public class TrayDBHelperTest extends AndroidTestCase {
         } catch (IllegalArgumentException e) {
             assertTrue(e.getMessage().contains("oldVersion"));
         }
+    }
+
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+        getContext().deleteDatabase(TEST_DATABASE_NAME);
     }
 
     private void assertV1Integrity(final TrayDBHelper trayDBHelper) {
@@ -137,7 +137,7 @@ public class TrayDBHelperTest extends AndroidTestCase {
 
     private TrayDBHelper initDb(final int version, final boolean closeDb) {
         TrayDBHelper dbHelper = new TrayDBHelper(getContext(),
-                TEST_DATABASE_NAME, version);
+                TEST_DATABASE_NAME, true, version);
         dbHelper.getReadableDatabase();
         if (closeDb) {
             dbHelper.close();

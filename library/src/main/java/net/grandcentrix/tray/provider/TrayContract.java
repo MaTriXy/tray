@@ -26,11 +26,16 @@ import android.text.TextUtils;
 import android.util.Log;
 
 /**
+ * Contract defining the data in the {@link TrayContentProvider}. Use {@link TrayProviderHelper} to access
+ * them.
+ * <p>
  * Created by jannisveerkamp on 17.09.14.
  */
-@SuppressWarnings("unused")
-public class TrayContract {
+class TrayContract {
 
+    /**
+     * default preferences
+     */
     public interface Preferences {
 
         interface Columns extends BaseColumns {
@@ -53,6 +58,9 @@ public class TrayContract {
         String BASE_PATH = "preferences";
     }
 
+    /**
+     * trays internal preferences to hold things like the version number
+     */
     public interface InternalPreferences extends Preferences {
 
         String BASE_PATH = "internal_preferences";
@@ -68,7 +76,8 @@ public class TrayContract {
     /**
      * use this only for tests and not in production
      *
-     * @see TrayProvider#setAuthority(String)
+     * @param authority the new authority for Tray
+     * @see TrayContentProvider#setAuthority(String)
      */
     public static void setAuthority(final String authority) {
         sTestAuthority = authority;

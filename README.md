@@ -2,25 +2,28 @@
 
 [![Build Status](https://travis-ci.org/grandcentrix/tray.svg?branch=master)](https://travis-ci.org/grandcentrix/tray) [![License](https://img.shields.io/badge/license-Apache%202-green.svg?style=flat)](https://github.com/grandcentrix/tray/blob/master/LICENSE.txt)
 
-If you have read the documentation of the [`SharedPreferences`](http://developer.android.com/reference/android/content/SharedPreferences.html) you might have seen this:
+If you have read the documentation of the [`SharedPreferences`](http://developer.android.com/reference/android/content/SharedPreferences.html) you might have seen one of these warnings:
 
 >Note: currently this class does not support use across multiple processes. This will be added later.
 
-**Sometimes _later_ becomes _never_!**
+**Sometimes _later_ becomes _never_!** Google even deprecated the multiprocess support because it never worked relieable
 
-Tray solves this problem with a [`ContentProvider`](http://developer.android.com/reference/android/content/ContentProvider.html) based storage. Tray also provides an advanced API which makes it super easy to access and maintain your data with upgrade and migrate mechanisms. Welcome to SharedPreferences 2.0 aka Tray.
+[![](https://cloud.githubusercontent.com/assets/1096485/9793296/110575d2-57e5-11e5-9728-34d3597771b8.png)](http://developer.android.com/reference/android/content/Context.html#MODE_MULTI_PROCESS)
+
+Tray is this mentioned _explicit cross-process data management approach_ powered by a [`ContentProvider`](http://developer.android.com/reference/android/content/ContentProvider.html). Tray also provides an advanced API which makes it super easy to access and maintain your data with upgrade and migrate mechanisms. Welcome to SharedPreferences 2.0 aka Tray.
 
 ## Features
 
 - **works multiprocess**
 - stores simple data types as key value pairs
 - automatically saves metadata for each entry (created, last updated, ...)
-- manage your Preferences in modules [TrayModulePreference](https://github.com/grandcentrix/tray/blob/master/library/src/main/java/net/grandcentrix/tray/TrayModulePreferences.java#L37)
-- Delete single modules, all modules, or [all modules except some very important ones](https://github.com/grandcentrix/tray/blob/master/library/src/main/java/net/grandcentrix/tray/Tray.java#L108)
-- update and migrate your data from one app version to next one with versioned Preferences and a [`onUpgrade()`](https://github.com/grandcentrix/tray/blob/master/library/src/main/java/net/grandcentrix/tray/accessor/Preference.java#L69) method
-- Migrate your current data stored in the SharedPreferences to Tray with [`SharedPreferencesImport`](https://github.com/grandcentrix/tray/blob/master/library/src/main/java/net/grandcentrix/tray/migration/SharedPreferencesImport.java)
+- manage your Preferences in modules [TrayPreference](https://github.com/grandcentrix/tray/blob/master/library/src/main/java/net/grandcentrix/tray/TrayPreferences.java)
+- Delete single modules, all modules, or [all modules except some very important ones](https://github.com/grandcentrix/tray/blob/master/library/src/main/java/net/grandcentrix/tray/Tray.java#L79)
+- update and migrate your data from one app version to next one with versioned Preferences and a [`onUpgrade()`](https://github.com/grandcentrix/tray/blob/14325e182e225e668218fc539f5de0c9b9e524e7/library/src/main/java/net/grandcentrix/tray/core/Preferences.java#L196) method
+- Migrate your current data stored in the SharedPreferences to Tray with [`SharedPreferencesImport`](https://github.com/grandcentrix/tray/blob/master/library/src/main/java/net/grandcentrix/tray/core/SharedPreferencesImport.java)
 - **tray is 100% unit tested!**
 - 0 lint warnings/errors
+- ![new_badge](https://cloud.githubusercontent.com/assets/1096485/9856970/37791f1c-5b18-11e5-97e4-53b8984c76e1.gif) Android 6.0 [Auto Backup for Apps](https://developer.android.com/preview/backup/index.html) support! [Read more in the wiki](https://github.com/grandcentrix/tray/wiki/Android-M-Auto-Backup-for-Apps-support)
 
 ## Usage
 
@@ -30,15 +33,15 @@ Simple tutorial how to use Tray in your project instead of the SharedPreferences
 
 ```java
 // create a preference accessor. This is for global app preferences.
-final TrayAppPreferences appPreferences = new TrayAppPreferences(getContext()); //this Preference comes for free from the library
+final AppPreferences appPreferences = new AppPreferences(getContext()); // this Preference comes for free from the library
 // save a key value pair
 appPreferences.put("key", "lorem ipsum");
 
-// read the value for your key. the second parameter is a fallback
+// read the value for your key. the second parameter is a fallback (optional otherwise throws)
 final String value = appPreferences.getString("key", "default");
 Log.v(TAG, "value: " + value); // value: lorem ipsum
 
-// read a key that isn't saved. returns the default
+// read a key that isn't saved. returns the default (or throws without default)
 final String defaultValue = appPreferences.getString("key2", "default");
 Log.v(TAG, "value: " + defaultValue); // value: default
 ```
@@ -47,26 +50,16 @@ No `Editor`, no `commit()` or `apply()` :wink:
 
 ### Create your own preference module
 
-It's recommended to bundle preferences in groups, so called modules instead of putting everyting in one global module. If you where using `SharedPreferences` before, you might have used different files to group your preferences. Extending the `TrayModulePreferences` and put all Keys inside this class is a recommended way to keep your code clean.
+It's recommended to bundle preferences in groups, so called modules instead of putting everything in one global module. If you were using `SharedPreferences` before, you might have used different files to group your preferences. Extending the `TrayModulePreferences` and put all Keys inside this class is a recommended way to keep your code clean.
 
 ```java
 // create a preference accessor for a module
-public class MyModulePreference extends TrayModulePreferences {
+public class MyModulePreference extends TrayPreferences {
 
     public static String KEY_IS_FIRST_LAUNCH = "first_launch";
 
     public MyModulePreference(final Context context) {
         super(context, "myModule", 1);
-    }
-
-    @Override
-    protected void onCreate(final int initialVersion) {
-
-    }
-
-    @Override
-    protected void onUpgrade(final int oldVersion, final int newVersion) {
-
     }
 }
 ```
@@ -77,7 +70,34 @@ final MyModulePreference myModulePreference = new MyModulePreference(getContext(
 myModulePreference.put(MyModulePreference.KEY_IS_FIRST_LAUNCH, false);
 ```
 
-See the [sample project](https://github.com/grandcentrix/tray/tree/master/sample) for more a demo
+See the [sample project](https://github.com/grandcentrix/tray/tree/master/sample) for more
+
+Like the Android [`SQLiteOpenHelper`](http://developer.android.com/reference/android/database/sqlite/SQLiteOpenHelper.html) a `TrayPreference` lets you implement methods to handle versioning.
+
+```java
+public class MyModulePreference extends TrayPreferences {
+
+    public MyModulePreference(final Context context) {
+        super(context, "myModule", 1);
+    }
+
+    @Override
+    protected void onCreate(final int initialVersion) {
+        super.onCreate(initialVersion);
+    }
+
+    @Override
+    protected void onUpgrade(final int oldVersion, final int newVersion) {
+        super.onUpgrade(oldVersion, newVersion);
+    }
+
+    @Override
+    protected void onDowngrade(final int oldVersion, final int newVersion) {
+        super.onDowngrade(oldVersion, newVersion);
+    }
+}
+
+```
 
 `// TOOD add clear sample`
 
@@ -85,7 +105,7 @@ See the [sample project](https://github.com/grandcentrix/tray/tree/master/sample
 
 `// TODO`
 
-## Getting Started [![Download](https://api.bintray.com/packages/passsy/maven/Tray/images/download.svg) ](https://bintray.com/passsy/maven/net.grandcentrix.tray/_latestVersion)
+## Getting Started [![Download](https://api.bintray.com/packages/passsy/maven/Tray/images/download.svg) ](https://bintray.com/passsy/maven/Tray/_latestVersion)
 
 ##### Add Tray to your project
 
@@ -94,7 +114,11 @@ Tray is available via [jcenter](http://blog.bintray.com/2015/02/09/android-studi
 ```java
 
 dependencies {
-    compile 'net.grandcentrix.tray:tray:0.9'
+    // stable
+    compile 'net.grandcentrix.tray:tray:0.9.2'
+    
+    // preview
+    compile 'net.grandcentrix.tray:tray:1.0.0-rc1'
 }
 
 ```
@@ -113,7 +137,7 @@ android {
 }
 ```
 
-Clean your project afterwards to genaterate the `/build/generated/res/generated/BUILDTYPE/values/generated.xml` which should then contain the following value:
+Clean your project afterwards to generate the `/build/generated/res/generated/BUILDTYPE/values/generated.xml` which should then contain the following value:
 
 ```xml
     <!-- Values from default config. -->
@@ -133,9 +157,7 @@ If you are using different applicationIds for different buildTypes of flavors re
 ## Project state
 
 Tray is currently in active development by [grandcentrix](http://www.grandcentrix.net/). We decided to go open source after reaching 100% test coverage.
-[grandcentrix](http://www.grandcentrix.net/) uses Tray in production in two apps without problems. 
-
-Before version 1.0 we'd like to have some feedback.
+[grandcentrix](http://www.grandcentrix.net/) uses Tray in production in two apps without problems.
 
 You can follow the development in the [`develop`](https://github.com/grandcentrix/tray/tree/develop) branch.
 
@@ -145,43 +167,88 @@ Tray has 100% test coverage and we'll try to keep it at that level for stable re
 
 You can run the coverage report with `./gradlew createDebugCoverageReport`. You'll find the output in `library/build/outputs/coverage/debug/index.html` which looks like this:
 
-![coverage report](http://i.imgur.com/V4OQsiY.png)
+![coverage report](https://cloud.githubusercontent.com/assets/1096485/9990484/fe61888c-6061-11e5-890d-a76f1ef60304.png)
 
-Those ~120 tests will help us indicate bugs in the future before we publish them. Don't think the code is 100% bug free based on the test coverage.
+You can check the coverage report at [codecov.io](https://codecov.io/github/grandcentrix/tray?branch=master)
+
+Those ~170 tests will help us indicate bugs in the future before we publish them. Don't think the code is 100% bug free based on the test coverage.
+
 
 ## Build state
 
-Branch  | Status
-------------- | -------------
-[`master`](https://github.com/grandcentrix/tray/tree/master) | [![Build Status](https://travis-ci.org/grandcentrix/tray.svg?branch=master)](https://travis-ci.org/grandcentrix/tray)
-[`develop`](https://github.com/grandcentrix/tray/tree/develop) | [![Build Status](https://travis-ci.org/grandcentrix/tray.svg?branch=develop)](https://travis-ci.org/grandcentrix/tray)
+Branch | Status | Coverage
+------------- | ------------- | -------------
+[`master`](https://github.com/grandcentrix/tray/tree/master) | [![Build Status](https://travis-ci.org/grandcentrix/tray.svg?branch=master)](https://travis-ci.org/grandcentrix/tray) | [![codecov.io](http://codecov.io/github/grandcentrix/tray/branch.svg?branch=master)](https://codecov.io/github/grandcentrix/tray?branch=master)
+[`develop`](https://github.com/grandcentrix/tray/tree/develop) | [![Build Status](https://travis-ci.org/grandcentrix/tray.svg?branch=develop)](https://travis-ci.org/grandcentrix/tray) | [![codecov.io](http://codecov.io/github/grandcentrix/tray/branch.svg?branch=develop)](https://codecov.io/github/grandcentrix/tray?branch=develop)
 
 ## ContentProvider is overkill
 
-At first, it was the simpst way to use IPC with [`Binder`](http://developer.android.com/reference/android/os/Binder.html) to solve the multiprocess problem. Using the `ContentProvider` with a database turned out to be very handy when it comes to save metadata. We thought about replacing the database with the real `SharedPreferences` to boost the performance (the SharedPreferences do not access the disk for every read/write action which causes the multiprocess problem btw) but the metadata seemed to be more valuable to us.
-If you have found a better solution implement the [`ModularizedStorage`](https://github.com/grandcentrix/tray/blob/master/library/src/main/java/net/grandcentrix/tray/storage/ModularizedStorage.java) and contribute to this project! We would appreciate it.
+At first, it was the simplest way to use IPC with [`Binder`](http://developer.android.com/reference/android/os/Binder.html) to solve the multiprocess problem. Using the `ContentProvider` with a database turned out to be very handy when it comes to save metadata. We thought about replacing the database with the real `SharedPreferences` to boost the performance (the SharedPreferences do not access the disk for every read/write action which causes the multiprocess problem btw) but the metadata seemed to be more valuable to us. see [more informations](https://github.com/grandcentrix/tray/issues/28#issuecomment-108282253)
+
+If you have found a better solution implement the [`TrayStorage`](https://github.com/grandcentrix/tray/blob/14325e182e225e668218fc539f5de0c9b9e524e7/library/src/main/java/net/grandcentrix/tray/core/TrayStorage.java) and contribute to this project! We would appreciate it.
 
 That said, yes the performance isn't as good as the SharedPreferences. But the performance is good enough to save/access single key value pairs synchron. If you want to save more you should think about a simple database.
 
 ## Missing Features
 
 Tray is ready to use without showblockers! But here are some nice to have features for the future:
-- saving `null` doesn't work
 - Reactive wrapper to observe values 
 - no support to save `Set<String>`. Is someone using this?
 - more metadata fields: (i.e. app version code/name)
 
+## Roadmap
+
+- rx wrapper for changes
+- save additional data types (`Set<String>`, `byte[]`)
+- performance tests
+- memory cache for based on contentobservers
+
 ## Versions
 
-##### Version 0.9 `27.04.15`
+##### Version 1.0.0 preview
+
+###### 1.0.0-rc2 `24.09.15`
+
+- added logging for all data changing methods. Enable via `adb shell setprop log.tag.Tray VERBOSE`
+
+###### 1.0.0-rc1 `21.09.15`
+
+- **Android M Auto Backup feature support** (see the [Documentation](https://github.com/grandcentrix/tray/wiki/Android-M-Auto-Backup-for-Apps-support))
+    - split up database for *user* and *device* specific data (device specific data can now be excluded from the auto backup)
+    - `TrayPreferences` has now an optional 3. constructor parameter `TrayStorage.Type`, `USER` or `DEVICE` indicating the internal database (required for Android M Auto Backup). Default is `USER`
+- **New methods and changes**
+    - `PreferenceAccessor#wipe()` clears the preference data and it's internal data (version)
+    - `TrayPreferences#annexModule(String name)` imports a module by name and wipes it afterwards. This allows renaming of preferences without losing data
+    - `AbstractTrayPreference#annex(ModularizedStorage<TrayItem>)` allows a storage to import another storage, wipes the imported afterwards
+    - `Preference` `#onCreate(...)` and `#onUpgrade(...)` aren't abstract anymore because they don't require an implementation
+- **Deprecations** (will be removed soon)
+    - `TrayAppPreferences` is now deprecated. Use `AppPreferences` instead (renaming)
+    - `TrayModulePreferences` is now deprecated. Use `TrayPreferences` instead to extend from for your own Preferences
+- **Internal structure**
+    - new package structure. merged packages `accessor`, `migration` and `storage` into `core`
+    - package `provider` contains a `TrayStorage` implementation with a `ContentProvider`. Is easy exchangeable with another `TrayStorage` implementation
+    - `ModularizedTrayPreference` is now called `AbstractTrayPreference`
+    - `ModularizedStorage` was renamed to `TrayStorage`
+
+
+>##### Version 0.9.2 `02.06.15`
+- `getContext()` is working in `TrayModulePreference#onCreate`
+
+>##### Version 0.9.1 `18.05.15`
+- saving `null` with `mPref.put(KEY, null)` works now
+- access to preference with throwing methods instead of default value (throws ItemNotFoundException). Example: `mPref.getString(KEY);` instead of `mPref.getString(KEY, "defaultValue");`
+- WrongTypeException when accessing a preference with a different type and the data isn't parsable. Float (`10.1f`) -> String works, String (`"10.1"`) -> Float works, String (`"test"`) -> Float throws!
+- javadoc in now included in aar
+
+>##### Version 0.9 `27.04.15`
 - initial public release
 
-##### Version 0.2 - 0.8
+>##### Version 0.2 - 0.8
 - Refactoring
 - 100% Testing
 - Bugfixing
 
-##### Version 0.1 `17.09.14`
+>##### Version 0.1 `17.09.14`
 - first working prototype
 
 
