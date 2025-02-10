@@ -16,12 +16,13 @@
 
 package net.grandcentrix.tray.provider;
 
-import net.grandcentrix.tray.R;
 import net.grandcentrix.tray.core.TrayLog;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.UriMatcher;
+import android.content.pm.ProviderInfo;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.MergeCursor;
@@ -112,6 +113,14 @@ public class TrayContentProvider extends ContentProvider {
         return rows;
     }
 
+    public SQLiteDatabase getReadableDatabase(final Uri uri) {
+        if (shouldBackup(uri)) {
+            return mUserDbHelper.getReadableDatabase();
+        } else {
+            return mDeviceDbHelper.getReadableDatabase();
+        }
+    }
+
     /**
      * @param uri localtion of the data
      * @return correct sqlite table for the given uri
@@ -186,8 +195,6 @@ public class TrayContentProvider extends ContentProvider {
         } else if (status == -1) {
             //throw new SQLiteException("An error occurred while saving preference.");
             TrayLog.w("Couldn't update or insert data. Uri: " + uri);
-        } else if (status == -2) {
-            TrayLog.w("Data is already inserted, no need to insert here");
         } else {
             TrayLog.w("unknown SQLite error");
         }
@@ -204,11 +211,16 @@ public class TrayContentProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
-        setAuthority(getContext().getString(R.string.tray__authority));
-
         mUserDbHelper = new TrayDBHelper(getContext(), true);
         mDeviceDbHelper = new TrayDBHelper(getContext(), false);
         return true;
+    }
+
+    @Override
+    public void attachInfo(Context context, ProviderInfo info) {
+        super.attachInfo(context, info);
+        setAuthority(info.authority);
+        TrayLog.v("TrayContentProvider registered for authority: " + info.authority);
     }
 
     @Override
@@ -256,7 +268,7 @@ public class TrayContentProvider extends ContentProvider {
             cursor = new MergeCursor(new Cursor[]{cursor1, cursor2});
         } else {
             // Query
-            cursor = builder.query(getWritableDatabase(uri), projection, selection,
+            cursor = builder.query(getReadableDatabase(uri), projection, selection,
                     selectionArgs, null, null, sortOrder);
         }
 
@@ -315,9 +327,6 @@ public class TrayContentProvider extends ContentProvider {
         return !"false".equals(backup);
     }
 
-    /**
-     * @see TrayContract#setAuthority(String)
-     */
     static void setAuthority(final String authority) {
         sURIMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 

@@ -16,6 +16,7 @@
 
 package net.grandcentrix.tray;
 
+import net.grandcentrix.tray.core.AbstractTrayPreference;
 import net.grandcentrix.tray.core.Preferences;
 import net.grandcentrix.tray.core.TrayItem;
 import net.grandcentrix.tray.provider.TrayProviderHelper;
@@ -66,18 +67,21 @@ public class Tray {
 
     /**
      * clears <b>all</b> saved preferences. Module independent. <b>Erases everything</b>.
+     *
+     * @return true when successfully cleared all modules
      */
-    public void clear() {
-        mProviderHelper.clear();
+    public boolean clear() {
+        return mProviderHelper.clear();
     }
 
     /**
      * clears <b>all</b> saved preferences, but the stated modules.
      *
      * @param modules modules excluded when deleting preferences
+     * @return true when successfully cleared the not stated modules
      */
-    public void clearBut(TrayPreferences... modules) {
-        mProviderHelper.clearBut(modules);
+    public boolean clearBut(AbstractTrayPreference... modules) {
+        return mProviderHelper.clearBut(modules);
     }
 
     /**
@@ -91,8 +95,10 @@ public class Tray {
 
     /**
      * clears <b>all</b> saved preferences. Module independent. <b>Erases everything</b>.
+     *
+     * @return true when successfully wiped everything
      */
-    public void wipe() {
-        mProviderHelper.wipe();
+    public boolean wipe() {
+        return mProviderHelper.wipe();
     }
 }

@@ -1,12 +1,14 @@
+# DEPRECATED - no longer actively maintained
+
 # Tray - a SharedPreferences replacement for Android
 
 [![Build Status](https://travis-ci.org/grandcentrix/tray.svg?branch=master)](https://travis-ci.org/grandcentrix/tray) [![License](https://img.shields.io/badge/license-Apache%202-green.svg?style=flat)](https://github.com/grandcentrix/tray/blob/master/LICENSE.txt)
 
 If you have read the documentation of the [`SharedPreferences`](http://developer.android.com/reference/android/content/SharedPreferences.html) you might have seen one of these warnings:
 
->Note: currently this class does not support use across multiple processes. This will be added later.
+>Note: This class does not support use across multiple processes.
 
-**Sometimes _later_ becomes _never_!** Google even deprecated the multiprocess support because it never worked relieable
+Google even deprecated the multiprocess support because it never worked relieable
 
 [![](https://cloud.githubusercontent.com/assets/1096485/9793296/110575d2-57e5-11e5-9728-34d3597771b8.png)](http://developer.android.com/reference/android/content/Context.html#MODE_MULTI_PROCESS)
 
@@ -23,7 +25,7 @@ Tray is this mentioned _explicit cross-process data management approach_ powered
 - Migrate your current data stored in the SharedPreferences to Tray with [`SharedPreferencesImport`](https://github.com/grandcentrix/tray/blob/master/library/src/main/java/net/grandcentrix/tray/core/SharedPreferencesImport.java)
 - **tray is 100% unit tested!**
 - 0 lint warnings/errors
-- ![new_badge](https://cloud.githubusercontent.com/assets/1096485/9856970/37791f1c-5b18-11e5-97e4-53b8984c76e1.gif) Android 6.0 [Auto Backup for Apps](https://developer.android.com/preview/backup/index.html) support! [Read more in the wiki](https://github.com/grandcentrix/tray/wiki/Android-M-Auto-Backup-for-Apps-support)
+- Android 6.0 [Auto Backup for Apps](https://developer.android.com/guide/topics/data/autobackup.html) support! [Read more in the wiki](https://github.com/grandcentrix/tray/wiki/Android-M-Auto-Backup-for-Apps-support)
 
 ## Usage
 
@@ -103,63 +105,75 @@ public class MyModulePreference extends TrayPreferences {
 
 ### Migrate from SharedPreferences to Tray
 
-`// TODO`
-
-## Getting Started [![Download](https://api.bintray.com/packages/passsy/maven/Tray/images/download.svg) ](https://bintray.com/passsy/maven/Tray/_latestVersion)
-
-##### Add Tray to your project
-
-Tray is available via [jcenter](http://blog.bintray.com/2015/02/09/android-studio-migration-from-maven-central-to-jcenter/)
+To migrate values from SharedPreferences you have to create you own preference module. This module will be now store all of your SharedPreferences values.
 
 ```java
+public class ImportPreferences extends TrayPreferences {
 
-dependencies {
-    // stable
-    compile 'net.grandcentrix.tray:tray:0.9.2'
+    // The SharedPreferences name
+    private static final String SHARED_PREFERENCES_FILE_NAME = "PREF_NAME";
     
-    // preview
-    compile 'net.grandcentrix.tray:tray:1.0.0-rc1'
-}
-
-```
-
-##### Set the authority
-
-To set the authority you need to override the string resource of the library with `resValue` in your `build.gradle`
-```java
-android {
-    ...
-    defaultConfig {
-        applicationId "your.app.id" // this is your unique applicationId
-
-        resValue "string", "tray__authority", "${applicationId}.tray" // add this to set a unique tray authority based on your applicationId
+    // The key inside the SHARED_PREFERENCES_NAME
+    private static final String KEY_FIRST_LAUNCH = "KEY_FIRST_LAUNCH";
+    
+    // The new key for this module
+    private static final String KEY_FIRST_LAUNCH_TRAY = "KEY_FIRST_LAUNCH_TRAY";
+    
+    public ImportPreferences(@NonNull Context context) {
+        super(context, "myImportModule", 1);
+    }    
+    
+    // Called only once when the module was created
+    @Override
+    protected void onCreate(int initialVersion) {
+        super.onCreate(initialVersion);
+            
+        // Create a SharedPreferencesImport object
+        SharedPreferencesImport importPref = 
+            new SharedPreferencesImport(getContext(), 
+                SHARED_PREFERENCES_FILE_NAME, KEY_FIRST_LAUNCH, KEY_FIRST_LAUNCH_TRAY);
+            
+        // Finally migrate it
+        migrate(importPref);
     }
 }
 ```
 
-Clean your project afterwards to generate the `/build/generated/res/generated/BUILDTYPE/values/generated.xml` which should then contain the following value:
+## Getting Started
 
-```xml
-    <!-- Values from default config. -->
-    <item name="tray__authority" type="string">your.app.id.tray</item>
+##### Add Tray to your project
+
+###### GitHub Packages
+
+```gradle
+
+repositories {
+    maven {
+        url = uri("https://maven.pkg.github.com/GCX-HCI/tray")
+    }
+}
+
+dependencies {
+    implementation "net.grandcentrix.tray:tray:0.12.0"
+}
+
 ```
 
-Tray is based on a ContentProvider. A ContentProvider needs a **unique** authority. When you use the same authority for multiple apps you will be unable to install the app due to a authority conflict with the error message:
+###### JCenter (deprecated)
+
+```gradle
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    implementation "net.grandcentrix.tray:tray:0.12.0"
+}
 
 ```
-Failure [INSTALL_FAILED_CONFLICTING_PROVIDER]
-```
 
-Changing the authority from one version to another app version is no problem! Tray always uses the same database.
-
-If you are using different applicationIds for different buildTypes of flavors read [this](https://blog.grandcentrix.net/how-to-install-different-app-variants-on-one-android-device/) article.
-
-## Project state
-
-Tray is currently in active development by [grandcentrix](http://www.grandcentrix.net/). We decided to go open source after reaching 100% test coverage.
-[grandcentrix](http://www.grandcentrix.net/) uses Tray in production in two apps without problems.
-
-You can follow the development in the [`develop`](https://github.com/grandcentrix/tray/tree/develop) branch.
+More on the `ContentProvider` configuration can be found in the [wiki](https://github.com/grandcentrix/tray/wiki/Custom-Authority)
 
 ## Testcoverage 100%
 
@@ -175,11 +189,9 @@ Those ~170 tests will help us indicate bugs in the future before we publish them
 
 
 ## Build state
+[![Build Status](https://travis-ci.org/grandcentrix/tray.svg?branch=master)](https://travis-ci.org/grandcentrix/tray)
 
-Branch | Status | Coverage
-------------- | ------------- | -------------
-[`master`](https://github.com/grandcentrix/tray/tree/master) | [![Build Status](https://travis-ci.org/grandcentrix/tray.svg?branch=master)](https://travis-ci.org/grandcentrix/tray) | [![codecov.io](http://codecov.io/github/grandcentrix/tray/branch.svg?branch=master)](https://codecov.io/github/grandcentrix/tray?branch=master)
-[`develop`](https://github.com/grandcentrix/tray/tree/develop) | [![Build Status](https://travis-ci.org/grandcentrix/tray.svg?branch=develop)](https://travis-ci.org/grandcentrix/tray) | [![codecov.io](http://codecov.io/github/grandcentrix/tray/branch.svg?branch=develop)](https://codecov.io/github/grandcentrix/tray?branch=develop)
+[![codecov.io](http://codecov.io/github/grandcentrix/tray/branch.svg?branch=master)](https://codecov.io/github/grandcentrix/tray?branch=master)
 
 ## ContentProvider is overkill
 
@@ -198,21 +210,38 @@ Tray is ready to use without showblockers! But here are some nice to have featur
 
 ## Roadmap
 
-- rx wrapper for changes
-- save additional data types (`Set<String>`, `byte[]`)
 - performance tests
 - memory cache for based on contentobservers
+- prevent app crashes due to database errors
+- rx wrapper for changes
+- save additional data types (`Set<String>`, `byte[]`)
 
 ## Versions
 
-##### Version 1.0.0 preview
+##### Version 0.11.1 `07.02.17`
 
-###### 1.0.0-rc2 `24.09.15`
+- preference key cannot be empty #84
+- `clearBut(TrayPreference)` -> `clearBut(AbstractTrayPreference)` #89
 
+##### Version 0.11.0 `07.09.16`
+- all accessor methods return `boolean` indicating the success of i.e. `put`, `remove`. They will never again throw an error. #69
+- new `contains()` method #74
+
+##### Version 0.10.0 `31.05.16`
+- All features and changes of the 1.0.0-rc preview builds
+- #65 Fix deletion of non string migrated shared preferences.
+
+>##### Version 1.0.0 preview - postponed until the memory cache is ready
+
+>###### 1.0.0-rc3 `05.11.15`
+- hotfix for listener on Android 6.0 which has caused a infinity loop #55
+- the sample project includes now a way to test the multi process support compared to the `SharedPreferences`
+- removed unnecessary write operation for every version check #54
+
+>###### 1.0.0-rc2 `24.09.15`
 - added logging for all data changing methods. Enable via `adb shell setprop log.tag.Tray VERBOSE`
 
-###### 1.0.0-rc1 `21.09.15`
-
+>###### 1.0.0-rc1 `21.09.15`
 - **Android M Auto Backup feature support** (see the [Documentation](https://github.com/grandcentrix/tray/wiki/Android-M-Auto-Backup-for-Apps-support))
     - split up database for *user* and *device* specific data (device specific data can now be excluded from the auto backup)
     - `TrayPreferences` has now an optional 3. constructor parameter `TrayStorage.Type`, `USER` or `DEVICE` indicating the internal database (required for Android M Auto Backup). Default is `USER`
@@ -231,24 +260,24 @@ Tray is ready to use without showblockers! But here are some nice to have featur
     - `ModularizedStorage` was renamed to `TrayStorage`
 
 
->##### Version 0.9.2 `02.06.15`
+##### Version 0.9.2 `02.06.15`
 - `getContext()` is working in `TrayModulePreference#onCreate`
 
->##### Version 0.9.1 `18.05.15`
+##### Version 0.9.1 `18.05.15`
 - saving `null` with `mPref.put(KEY, null)` works now
 - access to preference with throwing methods instead of default value (throws ItemNotFoundException). Example: `mPref.getString(KEY);` instead of `mPref.getString(KEY, "defaultValue");`
 - WrongTypeException when accessing a preference with a different type and the data isn't parsable. Float (`10.1f`) -> String works, String (`"10.1"`) -> Float works, String (`"test"`) -> Float throws!
 - javadoc in now included in aar
 
->##### Version 0.9 `27.04.15`
+##### Version 0.9 `27.04.15`
 - initial public release
 
->##### Version 0.2 - 0.8
+##### Version 0.2 - 0.8
 - Refactoring
 - 100% Testing
 - Bugfixing
 
->##### Version 0.1 `17.09.14`
+##### Version 0.1 `17.09.14`
 - first working prototype
 
 
